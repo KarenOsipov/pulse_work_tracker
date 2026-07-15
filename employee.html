@@ -234,8 +234,10 @@ const watchBanner = document.getElementById('watchBanner');
 // ---------- firebase auth ----------
 let uid = null;
 let empDocRef = null;
+let authReady;
+const authReadyPromise = new Promise(resolve=>{ authReady = resolve; });
 onAuthStateChanged(auth, (user)=>{
-  if(user){ uid = user.uid; empDocRef = doc(db, 'employees', uid); listenForCalls(); }
+  if(user){ uid = user.uid; empDocRef = doc(db, 'employees', uid); listenForCalls(); authReady(); }
 });
 signInAnonymously(auth).catch(err=>{
   syncBadge.textContent = 'Нет связи с сервером';
@@ -270,6 +272,10 @@ agreeBtn.addEventListener('click', async ()=>{
   agreeBtn.textContent = 'Запуск...';
   const name = employeeNameInput.value.trim() || 'Без имени';
   try{
+    await Promise.race([
+      authReadyPromise,
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('Не удалось авторизоваться (проверь Anonymous auth в Firebase)')), 8000))
+    ]);
     if(empDocRef){
       await setDoc(empDocRef, { name, online:true, status:'starting', lastSeen: serverTimestamp(), stats:{}, reports:[] }, { merge:true });
     }
@@ -278,6 +284,7 @@ agreeBtn.addEventListener('click', async ()=>{
     mainWrap.classList.add('visible');
     await startAll();
   }catch(err){
+    console.error('agreeBtn error:', err);
     alert('Не удалось запустить: ' + err.message);
     agreeBtn.disabled = false;
     agreeBtn.textContent = 'Я уведомлён(а) и согласен(на) — начать';
