@@ -282,6 +282,13 @@ async function startWatching(){
     remoteVideo.srcObject = e.streams[0];
     videoPlaceholder.style.display = 'none';
   };
+  pc.oniceconnectionstatechange = ()=>{
+    console.log('ICE state (admin):', pc.iceConnectionState);
+    if(pc.iceConnectionState === 'failed'){
+      videoPlaceholder.textContent = 'Не удалось установить соединение (вероятно, нужен TURN-сервер — см. README).';
+      videoPlaceholder.style.display = 'flex';
+    }
+  };
   addedEmpCandidates.clear();
 
   const callsCol = collection(db, 'employees', selectedEmpId, 'calls');
