@@ -18,4 +18,7 @@ export const firebaseConfig = {
 // firewall/NAT — потребуется добавить сюда ещё и TURN-сервер (см. README.md).
 export const iceServers = [
   { urls: "stun:stun.l.google.com:19302" }
+  // Если видео не подключается за жёстким NAT/firewall — раскомментируй и впиши
+  // свои данные с openrelay.metered.ca (см. README):
+  // ,{ urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" }
 ];
