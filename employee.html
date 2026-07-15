@@ -193,7 +193,6 @@
   });
 </script>
 <script type="module">
-import { FaceLandmarker, ObjectDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -292,6 +291,8 @@ agreeBtn.addEventListener('click', async ()=>{
 });
 
 async function initModels(){
+  const { FaceLandmarker, ObjectDetector, FilesetResolver } =
+    await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
   const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
   faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
     baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate:"GPU" },
@@ -308,16 +309,36 @@ function matrixToYawPitch(m){
 }
 function blendshapeMap(cats){ const m={}; for(const c of cats) m[c.categoryName]=c.score; return m; }
 
+function withTimeout(promise, ms, message){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error(message)), ms))
+  ]);
+}
+
 async function startAll(){
-  statusBadge.textContent = 'Загрузка ИИ-моделей...';
+  statusBadge.textContent = 'Загрузка ИИ-моделей... (до 30 сек на медленном интернете)';
   try{
-    await initModels();
-    stream = await navigator.mediaDevices.getUserMedia({ video:{width:640,height:480}, audio:false });
+    await withTimeout(initModels(), 30000,
+      'Модели не загрузились за 30 сек — похоже, заблокирован доступ к cdn.jsdelivr.net или storage.googleapis.com (прокси/фаервол/адблокер). Попробуй другую сеть или отключить блокировщик.');
+  }catch(err){
+    statusBadge.textContent = 'Ошибка загрузки ИИ-модели';
+    alert(err.message);
+    return;
+  }
+
+  statusBadge.textContent = 'Запрашиваю доступ к камере...';
+  try{
+    stream = await withTimeout(
+      navigator.mediaDevices.getUserMedia({ video:{width:640,height:480}, audio:false }),
+      20000,
+      'Браузер не ответил на запрос камеры за 20 сек. Обычно это значит, что доступ к камере для этого сайта заблокирован в настройках браузера — проверь иконку камеры/замка в адресной строке.'
+    );
     video.srcObject = stream;
     await video.play();
   }catch(err){
-    statusBadge.textContent = 'Ошибка камеры/модели';
-    alert('Не удалось запустить камеру или загрузить ИИ-модель: ' + err.message);
+    statusBadge.textContent = 'Ошибка камеры';
+    alert('Не удалось запустить камеру: ' + err.message);
     return;
   }
   running = true;
