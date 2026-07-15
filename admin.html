@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПУЛЬС — панель администратора</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D10; --panel:#14171C; --panel-alt:#191D23; --border:#242932;
+    --text:#ECEAE4; --dim:#8B93A3;
+    --danger:#FF3B30; --safe:#33D6A6; --warn:#FFB020; --scan:#5B8CFF; --violet:#B98BFF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(circle at 20% 0%, #10141a 0%, var(--bg) 55%);color:var(--text);
+    font-family:'Inter',sans-serif;min-height:100vh;}
+
+  #loginGate{position:fixed;inset:0;z-index:1000;background:rgba(6,7,9,.97);display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-card{max-width:380px;width:100%;background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:32px;}
+  .login-card h1{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0 0 6px;}
+  .login-card .sub{color:var(--dim);font-size:12.5px;margin-bottom:20px;line-height:1.5;}
+  .login-card input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:11px 12px;font-size:14px;margin-bottom:12px;outline:none;}
+  .login-card input:focus{border-color:var(--scan);}
+  .err{color:#ff8a80;font-size:12.5px;margin-bottom:10px;min-height:16px;}
+  .btn{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;border-radius:9px;padding:11px 16px;
+    border:1px solid var(--border);background:var(--panel-alt);color:var(--text);cursor:pointer;width:100%;}
+  .btn.primary{background:var(--scan);border-color:var(--scan);color:#04060a;}
+
+  .wrap{max-width:1320px;margin:0 auto;padding:26px 20px 60px;display:none;}
+  .wrap.visible{display:block;}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:14px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-dot{width:12px;height:12px;border-radius:50%;background:var(--scan);box-shadow:0 0 14px 2px var(--scan);}
+  .brand h1{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0;}
+  .brand span{color:var(--dim);font-size:12px;font-family:'JetBrains Mono',monospace;}
+  .btn.ghost{background:transparent;width:auto;}
+
+  .layout{display:grid;grid-template-columns:320px 1fr;gap:18px;align-items:start;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1.1px;color:var(--dim);margin:0 0 12px;font-weight:600;}
+
+  .emp-list{display:flex;flex-direction:column;gap:8px;max-height:75vh;overflow-y:auto;}
+  .emp-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;background:var(--panel-alt);border:1px solid var(--border);cursor:pointer;}
+  .emp-row:hover{border-color:#3a4150;}
+  .emp-row.selected{border-color:var(--scan);}
+  .emp-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .emp-row .dot.online{background:var(--safe);box-shadow:0 0 6px var(--safe);}
+  .emp-row .dot.offline{background:var(--dim);}
+  .emp-row .name{font-size:13.5px;font-weight:500;flex:1;}
+  .emp-row .mini{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+  .empty-hint{color:var(--dim);font-size:13px;padding:20px;text-align:center;}
+
+  .detail-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .detail-header h2{font-family:'Space Grotesk',sans-serif;font-size:19px;margin:0;color:var(--text);text-transform:none;letter-spacing:0;}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+  @media (max-width:700px){.stats-grid{grid-template-columns:1fr 1fr;}}
+  .stat{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:13px;}
+  .stat .num{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;}
+  .stat .label{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+
+  .video-panel{position:relative;width:100%;max-width:480px;background:#000;border-radius:10px;overflow:hidden;border:1px solid var(--border);aspect-ratio:4/3;margin-bottom:14px;}
+  .video-panel video{width:100%;height:100%;object-fit:cover;}
+  .video-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12.5px;text-align:center;padding:20px;}
+
+  .log{max-height:340px;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:10px;}
+  .log-item{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px 13px;}
+  .log-item .time{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-bottom:5px;}
+  .log-item .text{font-size:13px;line-height:1.5;}
+
+  footer{margin-top:24px;text-align:center;color:var(--dim);font-size:11.5px;font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+
+<div id="loginGate">
+  <div class="login-card">
+    <h1>Вход администратора</h1>
+    <div class="sub">Учётная запись создаётся вручную в консоли Firebase (Authentication → Add user) — самостоятельная регистрация здесь отключена намеренно, для безопасности.</div>
+    <div class="err" id="loginErr"></div>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Пароль">
+    <button class="btn primary" id="loginBtn">Войти</button>
+  </div>
+</div>
+
+<div class="wrap" id="mainWrap">
+  <header>
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div><h1>ПУЛЬС · Админ</h1><span id="adminEmail">—</span></div>
+    </div>
+    <button class="btn ghost" id="logoutBtn">Выйти</button>
+  </header>
+
+  <div class="layout">
+    <div class="card">
+      <h2>Сотрудники</h2>
+      <div class="emp-list" id="empList"><div class="empty-hint">Ожидание подключений...</div></div>
+    </div>
+
+    <div class="card" id="detailCard">
+      <div class="empty-hint" id="noSelection">Выбери сотрудника слева, чтобы увидеть его статистику.</div>
+      <div id="detailContent" style="display:none;">
+        <div class="detail-header">
+          <h2 id="detName">—</h2>
+          <div style="display:flex;gap:10px;">
+            <button class="btn" id="watchBtn">Смотреть камеру</button>
+          </div>
+        </div>
+
+        <div class="video-panel" id="videoPanel">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <div class="video-placeholder" id="videoPlaceholder">Нажми «Смотреть камеру», чтобы запросить живое видео. Сотрудник увидит уведомление об этом на своём экране.</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat"><div class="num" id="dFocus">—</div><div class="label">Вовлечённость</div></div>
+          <div class="stat"><div class="num" id="dBlink">—</div><div class="label">Морганий/мин</div></div>
+          <div class="stat"><div class="num" id="dMood">—</div><div class="label">Настроение (эвристика)</div></div>
+          <div class="stat"><div class="num" id="dAway">—</div><div class="label">Отходов от места</div></div>
+          <div class="stat"><div class="num" id="dPhone">—</div><div class="label">Телефон в кадре</div></div>
+          <div class="stat"><div class="num" id="dTalk">—</div><div class="label">Признаков разговора</div></div>
+        </div>
+
+        <h2 style="margin-top:6px;">Текстовые сводки</h2>
+        <div class="log" id="detailLog"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Живое видео идёт напрямую между браузерами (WebRTC), не через сервер. Статистика хранится в Firestore.</footer>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
+  serverTimestamp, arrayUnion
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig, iceServers } from "./shared/firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const loginGate = document.getElementById('loginGate');
+const loginBtn = document.getElementById('loginBtn');
+const loginErr = document.getElementById('loginErr');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const mainWrap = document.getElementById('mainWrap');
+const adminEmail = document.getElementById('adminEmail');
+const logoutBtn = document.getElementById('logoutBtn');
+const empList = document.getElementById('empList');
+const noSelection = document.getElementById('noSelection');
+const detailContent = document.getElementById('detailContent');
+const detName = document.getElementById('detName');
+const watchBtn = document.getElementById('watchBtn');
+const remoteVideo = document.getElementById('remoteVideo');
+const videoPlaceholder = document.getElementById('videoPlaceholder');
+const dFocus = document.getElementById('dFocus');
+const dBlink = document.getElementById('dBlink');
+const dMood = document.getElementById('dMood');
+const dAway = document.getElementById('dAway');
+const dPhone = document.getElementById('dPhone');
+const dTalk = document.getElementById('dTalk');
+const detailLog = document.getElementById('detailLog');
+
+loginBtn.addEventListener('click', async ()=>{
+  loginErr.textContent = '';
+  try{
+    await signInWithEmailAndPassword(auth, emailInput.value.trim(), passwordInput.value);
+  }catch(e){
+    loginErr.textContent = 'Не удалось войти: проверь email и пароль.';
+  }
+});
+logoutBtn.addEventListener('click', ()=> signOut(auth));
+
+let employeesUnsub = null;
+let selectedEmpUnsub = null;
+let selectedEmpId = null;
+let employeesData = {};
+
+onAuthStateChanged(auth, (user)=>{
+  if(user && !user.isAnonymous){
+    loginGate.style.display = 'none';
+    mainWrap.classList.add('visible');
+    adminEmail.textContent = user.email;
+    subscribeEmployees();
+  } else {
+    mainWrap.classList.remove('visible');
+    loginGate.style.display = 'flex';
+    if(employeesUnsub) employeesUnsub();
+  }
+});
+
+function subscribeEmployees(){
+  employeesUnsub = onSnapshot(collection(db, 'employees'), (snap)=>{
+    employeesData = {};
+    snap.forEach(d=> employeesData[d.id] = d.data());
+    renderEmployeeList();
+    if(selectedEmpId && employeesData[selectedEmpId]) renderDetail(selectedEmpId, employeesData[selectedEmpId]);
+  });
+}
+
+function isOnline(data){
+  if(!data.online) return false;
+  if(!data.lastSeen || !data.lastSeen.toMillis) return true; // только что записано, ещё нет серверного времени
+  return (Date.now() - data.lastSeen.toMillis()) < 20000;
+}
+
+function renderEmployeeList(){
+  const ids = Object.keys(employeesData);
+  if(!ids.length){ empList.innerHTML = '<div class="empty-hint">Пока никто не подключился.</div>'; return; }
+  ids.sort((a,b)=> (employeesData[b].lastSeen?.toMillis?.()||0) - (employeesData[a].lastSeen?.toMillis?.()||0));
+  empList.innerHTML = '';
+  ids.forEach(id=>{
+    const data = employeesData[id];
+    const online = isOnline(data);
+    const row = document.createElement('div');
+    row.className = 'emp-row' + (id===selectedEmpId ? ' selected' : '');
+    row.innerHTML = `<span class="dot ${online?'online':'offline'}"></span>
+      <span class="name">${data.name || 'Без имени'}</span>
+      <span class="mini">${data.stats?.focusPct || '—'}</span>`;
+    row.addEventListener('click', ()=> selectEmployee(id));
+    empList.appendChild(row);
+  });
+}
+
+function selectEmployee(id){
+  selectedEmpId = id;
+  noSelection.style.display = 'none';
+  detailContent.style.display = 'block';
+  stopWatching();
+  renderEmployeeList();
+  renderDetail(id, employeesData[id]);
+}
+
+function renderDetail(id, data){
+  detName.textContent = data.name || 'Без имени';
+  const s = data.stats || {};
+  dFocus.textContent = s.focusPct || '—';
+  dBlink.textContent = s.blinkRate || '—';
+  dMood.textContent = s.mood || '—';
+  dAway.textContent = s.awayCount ?? '—';
+  dPhone.textContent = s.phoneCount ?? '—';
+  dTalk.textContent = s.talkCount ?? '—';
+
+  detailLog.innerHTML = '';
+  (data.reports || []).forEach(r=>{
+    const row = document.createElement('div');
+    row.className = 'log-item';
+    row.innerHTML = `<div class="time">${r.fromClock} — ${r.toClock}</div><div class="text">${r.text}</div>`;
+    detailLog.appendChild(row);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// WebRTC: запрос живого видео у выбранного сотрудника
+// ---------------------------------------------------------------------------
+let pc = null;
+let callDocRef = null;
+let callUnsub = null;
+const addedEmpCandidates = new Set();
+let watching = false;
+
+watchBtn.addEventListener('click', ()=>{
+  if(watching) stopWatching(); else startWatching();
+});
+
+async function startWatching(){
+  if(!selectedEmpId) return;
+  watchBtn.textContent = 'Подключение...';
+  pc = new RTCPeerConnection({ iceServers });
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  pc.ontrack = (e)=>{
+    remoteVideo.srcObject = e.streams[0];
+    videoPlaceholder.style.display = 'none';
+  };
+  addedEmpCandidates.clear();
+
+  const callsCol = collection(db, 'employees', selectedEmpId, 'calls');
+  callDocRef = doc(callsCol);
+
+  pc.onicecandidate = (e)=>{
+    if(e.candidate && callDocRef){
+      updateDoc(callDocRef, { adminCandidates: arrayUnion(JSON.stringify(e.candidate)) }).catch(()=>{});
+    }
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await setDoc(callDocRef, {
+    active: true, offer: JSON.stringify(offer),
+    adminCandidates: [], employeeCandidates: [], createdAt: serverTimestamp()
+  });
+
+  callUnsub = onSnapshot(callDocRef, async (snap)=>{
+    const data = snap.data();
+    if(!data) return;
+    if(data.answer && pc.signalingState === 'have-local-offer'){
+      await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.answer)));
+    }
+    (data.employeeCandidates||[]).forEach(c=>{
+      if(!addedEmpCandidates.has(c)){
+        addedEmpCandidates.add(c);
+        pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))).catch(()=>{});
+      }
+    });
+  });
+
+  watching = true;
+  watchBtn.textContent = 'Остановить просмотр';
+}
+
+function stopWatching(){
+  if(callDocRef) updateDoc(callDocRef, { active:false }).catch(()=>{});
+  if(callUnsub) callUnsub();
+  if(pc) pc.close();
+  pc = null; callDocRef = null; callUnsub = null;
+  watching = false;
+  watchBtn.textContent = 'Смотреть камеру';
+  remoteVideo.srcObject = null;
+  videoPlaceholder.style.display = 'flex';
+}
+</script>
+</body>
+</html>

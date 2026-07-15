@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПУЛЬС — рабочее место сотрудника</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D10; --panel:#14171C; --panel-alt:#191D23; --border:#242932;
+    --text:#ECEAE4; --dim:#8B93A3;
+    --danger:#FF3B30; --safe:#33D6A6; --warn:#FFB020; --scan:#5B8CFF; --violet:#B98BFF;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(circle at 20% 0%, #10141a 0%, var(--bg) 55%);color:var(--text);
+    font-family:'Inter',sans-serif;min-height:100vh;}
+
+  #consentGate{position:fixed;inset:0;z-index:1000;background:rgba(6,7,9,.97);display:flex;align-items:center;justify-content:center;padding:24px;}
+  .consent-card{max-width:560px;width:100%;background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:32px;}
+  .consent-card h1{font-family:'Space Grotesk',sans-serif;font-size:22px;margin:0 0 6px;}
+  .consent-card .sub{color:var(--dim);font-size:13px;margin-bottom:20px;}
+  .consent-list{list-style:none;padding:0;margin:0 0 22px;display:flex;flex-direction:column;gap:10px;}
+  .consent-list li{display:flex;gap:10px;font-size:13.5px;line-height:1.5;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:11px 13px;}
+  .consent-list .ico{flex-shrink:0;width:20px;text-align:center;}
+  .consent-note{font-size:12px;color:var(--dim);line-height:1.6;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:20px;}
+  .consent-note b{color:var(--text);}
+  .name-input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:11px 12px;font-size:14px;margin-bottom:16px;outline:none;}
+  .name-input:focus{border-color:var(--scan);}
+  .consent-actions{display:flex;gap:10px;}
+  .btn{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;border-radius:9px;padding:11px 16px;
+    border:1px solid var(--border);background:var(--panel-alt);color:var(--text);cursor:pointer;}
+  .btn:hover{border-color:#3a4150;}
+  .btn.primary{background:var(--scan);border-color:var(--scan);color:#04060a;}
+  .btn.stop{background:var(--danger);border-color:var(--danger);color:#0a0505;}
+
+  .wrap{max-width:1280px;margin:0 auto;padding:26px 20px 60px;display:none;}
+  .wrap.visible{display:block;}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:14px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-dot{width:12px;height:12px;border-radius:50%;background:var(--scan);box-shadow:0 0 14px 2px var(--scan);}
+  .brand h1{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0;}
+  .brand span{color:var(--dim);font-size:12px;font-family:'JetBrains Mono',monospace;}
+  .rec{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#ff8a80;
+    background:rgba(255,59,48,.1);border:1px solid #4f1c1c;padding:7px 13px;border-radius:100px;}
+  .rec .blob{width:8px;height:8px;border-radius:50%;background:var(--danger);animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  #watchBanner{display:none;position:sticky;top:0;z-index:50;background:linear-gradient(90deg,#3a2a0a,#4a1a1a);
+    border:1px solid var(--warn);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13.5px;
+    display:none;align-items:center;gap:10px;}
+  #watchBanner.active{display:flex;}
+  #watchBanner .dot{width:9px;height:9px;border-radius:50%;background:var(--warn);animation:pulse 1s infinite;flex-shrink:0;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+  @media (max-width:980px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:12.5px;text-transform:uppercase;letter-spacing:1.1px;color:var(--dim);margin:0 0 14px;font-weight:600;}
+  .video-box{position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;border:1px solid var(--border);aspect-ratio:4/3;}
+  .video-box video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+  .status-badge{position:absolute;top:10px;left:10px;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 12px;border-radius:100px;background:rgba(10,12,15,.75);}
+  .sync-badge{position:absolute;top:10px;right:10px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 10px;border-radius:100px;background:rgba(10,12,15,.75);color:var(--dim);}
+  .sync-badge.ok{color:var(--safe);}
+
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .stat{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:13px;}
+  .stat .num{font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:700;}
+  .stat .label{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+  .mood-pill{font-family:'JetBrains Mono',monospace;font-size:13px;padding:8px 14px;border-radius:100px;background:var(--panel-alt);border:1px solid var(--border);display:inline-block;}
+  .caveat{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5;}
+  .timeline{height:34px;border-radius:8px;overflow:hidden;display:flex;border:1px solid var(--border);}
+  .timeline .seg{height:100%;flex-shrink:0;}
+  .timeline-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--dim);}
+  .timeline-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .timeline-legend i{width:9px;height:9px;border-radius:3px;display:inline-block;}
+  .log{max-height:360px;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:10px;}
+  .log-item{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px 13px;}
+  .log-item .time{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);margin-bottom:5px;}
+  .log-item .text{font-size:13px;line-height:1.5;}
+  select{background:var(--panel-alt);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-family:'JetBrains Mono',monospace;font-size:12.5px;}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  footer{margin-top:24px;text-align:center;color:var(--dim);font-size:11.5px;font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+
+<div id="consentGate">
+  <div class="consent-card">
+    <h1>Прозрачный монитор вовлечённости</h1>
+    <div class="sub">Перед началом — что именно отслеживается на этом компьютере:</div>
+    <ul class="consent-list">
+      <li><span class="ico">👁️</span> Частота морганий и общая направленность взгляда</li>
+      <li><span class="ico">📱</span> Появление телефона в кадре</li>
+      <li><span class="ico">💬</span> Признаки разговора (движение рта)</li>
+      <li><span class="ico">🚶</span> Отсутствие на рабочем месте</li>
+      <li><span class="ico">🙂</span> Приблизительная оценка выражения лица (эвристика)</li>
+      <li><span class="ico">📡</span> Статистика и текстовые сводки синхронизируются с админ-панелью. Администратор может по запросу посмотреть живое видео с этой камеры — в этот момент на экране появится явное предупреждение</li>
+    </ul>
+    <div class="consent-note">
+      Видео для ИИ-анализа обрабатывается локально. Статистика и отчёты передаются в базу данных компании
+      для просмотра администратором. Мониторинг можно поставить на паузу или остановить в любой момент.
+      Оценка "настроения" — грубая эвристика, не диагноз.
+    </div>
+    <input type="text" class="name-input" id="employeeName" placeholder="Твоё имя (увидит администратор)">
+    <div class="consent-actions">
+      <button class="btn primary" id="agreeBtn" style="flex:1;">Я уведомлён(а) и согласен(на) — начать</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="mainWrap">
+  <header>
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div><h1>ПУЛЬС</h1><span id="whoLabel">монитор вовлечённости</span></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div class="rec" id="recPill"><span class="blob"></span><span id="recText">Идёт запись</span></div>
+      <button class="btn" id="pauseBtn">Пауза</button>
+      <button class="btn stop" id="stopBtn">Стоп и отчёт</button>
+    </div>
+  </header>
+
+  <div id="watchBanner"><span class="dot"></span><span>Администратор сейчас смотрит вашу камеру в реальном времени</span></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Камера</h2>
+      <div class="video-box">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="status-badge" id="statusBadge">Инициализация...</div>
+        <div class="sync-badge" id="syncBadge">Синхронизация...</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Статистика сессии</h2>
+      <div class="stats-grid">
+        <div class="stat"><div class="num" id="statFocus">—</div><div class="label">Вовлечённость</div></div>
+        <div class="stat"><div class="num" id="statBlink">—</div><div class="label">Морганий/мин</div></div>
+        <div class="stat"><div class="num" id="statAway">0</div><div class="label">Отходов от места</div></div>
+        <div class="stat"><div class="num" id="statPhone">0</div><div class="label">Телефон в кадре</div></div>
+        <div class="stat"><div class="num" id="statTalk">0</div><div class="label">Признаков разговора</div></div>
+        <div class="stat"><div class="num" id="statTime">00:00</div><div class="label">Время сессии</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Приблизительное настроение</h2>
+      <div class="mood-pill" id="moodPill">—</div>
+      <div class="caveat">Грубая эвристика по мимике. Не использовать как единственный показатель самочувствия человека.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h2>Таймлайн активности</h2>
+    <div class="timeline" id="timeline"></div>
+    <div class="timeline-legend">
+      <span><i style="background:var(--safe)"></i>Сфокусирован</span>
+      <span><i style="background:var(--scan)"></i>Отвлёкся</span>
+      <span><i style="background:var(--warn)"></i>Разговор</span>
+      <span><i style="background:var(--violet)"></i>Телефон</span>
+      <span><i style="background:var(--danger)"></i>Нет на месте</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar" style="justify-content:space-between;margin-bottom:14px;">
+      <h2 style="margin:0;">Текстовые отчёты</h2>
+      <div class="toolbar">
+        <span style="font-size:12px;color:var(--dim);">Интервал сводки:</span>
+        <select id="intervalSelect">
+          <option value="1">1 мин</option>
+          <option value="5" selected>5 мин</option>
+          <option value="10">10 мин</option>
+          <option value="15">15 мин</option>
+        </select>
+        <button class="btn" id="exportBtn">Скачать отчёт (.txt)</button>
+      </div>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <footer>Обработка видео — локально в браузере. Статистика синхронизируется с админ-панелью компании через Firebase.</footer>
+</div>
+
+<script type="module">
+import { FaceLandmarker, ObjectDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, updateDoc, serverTimestamp,
+  collection, onSnapshot, arrayUnion
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig, iceServers } from "./shared/firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ---------- DOM ----------
+const consentGate = document.getElementById('consentGate');
+const agreeBtn = document.getElementById('agreeBtn');
+const employeeNameInput = document.getElementById('employeeName');
+const mainWrap = document.getElementById('mainWrap');
+const whoLabel = document.getElementById('whoLabel');
+const video = document.getElementById('video');
+const statusBadge = document.getElementById('statusBadge');
+const syncBadge = document.getElementById('syncBadge');
+const pauseBtn = document.getElementById('pauseBtn');
+const stopBtn = document.getElementById('stopBtn');
+const recText = document.getElementById('recText');
+const statFocus = document.getElementById('statFocus');
+const statBlink = document.getElementById('statBlink');
+const statAway = document.getElementById('statAway');
+const statPhone = document.getElementById('statPhone');
+const statTalk = document.getElementById('statTalk');
+const statTime = document.getElementById('statTime');
+const moodPill = document.getElementById('moodPill');
+const timelineEl = document.getElementById('timeline');
+const logEl = document.getElementById('log');
+const intervalSelect = document.getElementById('intervalSelect');
+const exportBtn = document.getElementById('exportBtn');
+const watchBanner = document.getElementById('watchBanner');
+
+// ---------- firebase auth ----------
+let uid = null;
+let empDocRef = null;
+onAuthStateChanged(auth, (user)=>{
+  if(user){ uid = user.uid; empDocRef = doc(db, 'employees', uid); listenForCalls(); }
+});
+signInAnonymously(auth).catch(err=>{
+  syncBadge.textContent = 'Нет связи с сервером';
+  console.error(err);
+});
+
+// ---------- AI / detection state (как в локальной версии) ----------
+let faceLandmarker = null, objectDetector = null;
+let running = false, paused = false, rafId = null, stream = null;
+let sessionStart = null, lastFaceSeen = performance.now();
+let baseline = { yaw: 0, pitch: 0, calibrated: false };
+let blinkTimestamps = [], blinkWasClosed = false;
+let stateTotals = { focused:0, distracted:0, talking:0, phone:0, away:0 };
+let eventCounts = { away:0, phone:0, talk:0 };
+let lastState = null, lastStateChangeAt = null;
+let timelineSamples = [];
+let jawOpenHistory = [];
+let phoneUntil = 0;
+let moodCounts = { positive:0, neutral:0, strained:0, tired:0 };
+let windowStart = 0, windowTotals = {}, windowEvents = {}, windowMood = {};
+let reportLog = [];
+
+const STATE_COLORS = { focused:'var(--safe)', distracted:'var(--scan)', talking:'var(--warn)', phone:'var(--violet)', away:'var(--danger)' };
+const STATE_LABELS = { focused:'Сфокусирован', distracted:'Отвлёкся', talking:'Разговор', phone:'Телефон в кадре', away:'Нет на месте' };
+
+function fmtClock(ms){ const s=Math.floor(ms/1000),m=Math.floor(s/60),r=s%60; return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0'); }
+function fmtTimeOfDay(ts){ return new Date(ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDurMin(ms){ const t=Math.round(ms/1000),m=Math.floor(t/60),s=t%60; return m<=0?`${s} с`:`${m} мин ${s} с`; }
+
+agreeBtn.addEventListener('click', async ()=>{
+  const name = employeeNameInput.value.trim() || 'Без имени';
+  whoLabel.textContent = name + ' · монитор вовлечённости';
+  consentGate.style.display = 'none';
+  mainWrap.classList.add('visible');
+  if(empDocRef){
+    await setDoc(empDocRef, { name, online:true, status:'starting', lastSeen: serverTimestamp(), stats:{}, reports:[] }, { merge:true });
+  }
+  await startAll();
+});
+
+async function initModels(){
+  const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
+    baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate:"GPU" },
+    outputFaceBlendshapes:true, outputFacialTransformationMatrixes:true, runningMode:"VIDEO", numFaces:1
+  });
+  objectDetector = await ObjectDetector.createFromOptions(fileset, {
+    baseOptions: { modelAssetPath:"https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite", delegate:"GPU" },
+    scoreThreshold:0.4, maxResults:5, runningMode:"VIDEO"
+  });
+}
+function matrixToYawPitch(m){
+  const d=m.data, m00=d[0], m10=d[4], m20=d[8], m21=d[9], m22=d[10];
+  return { yaw: Math.atan2(-m20, Math.sqrt(m00*m00+m10*m10))*(180/Math.PI), pitch: Math.atan2(m21,m22)*(180/Math.PI) };
+}
+function blendshapeMap(cats){ const m={}; for(const c of cats) m[c.categoryName]=c.score; return m; }
+
+async function startAll(){
+  statusBadge.textContent = 'Загрузка ИИ-моделей...';
+  try{
+    await initModels();
+    stream = await navigator.mediaDevices.getUserMedia({ video:{width:640,height:480}, audio:false });
+    video.srcObject = stream;
+    await video.play();
+  }catch(err){
+    statusBadge.textContent = 'Ошибка камеры/модели';
+    alert('Не удалось запустить камеру или загрузить ИИ-модель: ' + err.message);
+    return;
+  }
+  running = true;
+  sessionStart = performance.now();
+  windowStart = sessionStart;
+  lastStateChangeAt = sessionStart;
+  lastState = 'distracted';
+
+  statusBadge.textContent = 'Калибровка... смотри прямо';
+  await calibrate();
+  statusBadge.textContent = 'Работает';
+
+  loop();
+  setInterval(runObjectDetection, 1200);
+  setInterval(tick1s, 1000);
+  setInterval(syncToServer, 5000);
+}
+
+async function calibrate(){
+  const samples = [];
+  const t0 = performance.now();
+  await new Promise(resolve=>{
+    function sample(){
+      const now = performance.now();
+      const results = faceLandmarker.detectForVideo(video, now);
+      if(results.faceLandmarks && results.faceLandmarks.length && results.facialTransformationMatrixes[0]){
+        samples.push(matrixToYawPitch(results.facialTransformationMatrixes[0]));
+      }
+      if(now - t0 < 1500){ requestAnimationFrame(sample); } else { resolve(); }
+    }
+    sample();
+  });
+  if(samples.length){
+    baseline.yaw = samples.reduce((a,s)=>a+s.yaw,0)/samples.length;
+    baseline.pitch = samples.reduce((a,s)=>a+s.pitch,0)/samples.length;
+    baseline.calibrated = true;
+  }
+}
+
+function runObjectDetection(){
+  if(!running || paused) return;
+  const now = performance.now();
+  try{
+    const results = objectDetector.detectForVideo(video, now);
+    const hasPhone = results.detections.some(d => d.categories[0] && d.categories[0].categoryName === 'cell phone');
+    if(hasPhone){ phoneUntil = now + 3000; }
+  }catch(e){}
+}
+
+function loop(){
+  if(!running) return;
+  if(paused){ rafId = requestAnimationFrame(loop); return; }
+  const now = performance.now();
+  const results = faceLandmarker.detectForVideo(video, now);
+  const faceFound = results.faceLandmarks && results.faceLandmarks.length > 0;
+  let currentState = 'away', moodLabel = null;
+
+  if(faceFound){
+    lastFaceSeen = now;
+    let yaw=0,pitch=0,gazeScore=0,blinkScore=0,jawOpen=0,bs={};
+    if(results.facialTransformationMatrixes[0]){ const yp=matrixToYawPitch(results.facialTransformationMatrixes[0]); yaw=yp.yaw; pitch=yp.pitch; }
+    if(results.faceBlendshapes[0]){
+      bs = blendshapeMap(results.faceBlendshapes[0].categories);
+      const horiz = Math.max(bs.eyeLookOutLeft||0, bs.eyeLookOutRight||0, bs.eyeLookInLeft||0, bs.eyeLookInRight||0);
+      const vert = Math.max(bs.eyeLookUpLeft||0, bs.eyeLookUpRight||0, bs.eyeLookDownLeft||0, bs.eyeLookDownRight||0);
+      gazeScore = Math.max(horiz, vert);
+      blinkScore = Math.max(bs.eyeBlinkLeft||0, bs.eyeBlinkRight||0);
+      jawOpen = bs.jawOpen||0;
+    }
+    const closed = blinkScore > 0.55;
+    if(closed && !blinkWasClosed) blinkTimestamps.push(now);
+    blinkWasClosed = closed;
+    blinkTimestamps = blinkTimestamps.filter(t=>now-t<60000);
+
+    jawOpenHistory.push({v:jawOpen,t:now});
+    jawOpenHistory = jawOpenHistory.filter(s=>now-s.t<2000);
+    let talking = false;
+    if(jawOpenHistory.length > 5){
+      const vals = jawOpenHistory.map(s=>s.v);
+      const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+      const variance = vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length;
+      talking = variance > 0.006 && mean > 0.03;
+    }
+
+    const headDev = baseline.calibrated ? Math.max(Math.abs(yaw-baseline.yaw),Math.abs(pitch-baseline.pitch)) : Math.max(Math.abs(yaw),Math.abs(pitch));
+    const distracted = headDev > 20 || gazeScore > 0.5;
+
+    const smile = Math.max(bs.mouthSmileLeft||0, bs.mouthSmileRight||0);
+    const frown = Math.max(bs.mouthFrownLeft||0, bs.mouthFrownRight||0);
+    const browDown = Math.max(bs.browDownLeft||0, bs.browDownRight||0);
+    const squint = Math.max(bs.eyeSquintLeft||0, bs.eyeSquintRight||0);
+    const blinkRateNow = blinkTimestamps.length;
+    if(smile > 0.35) moodLabel = 'positive';
+    else if(browDown > 0.45 || frown > 0.3) moodLabel = 'strained';
+    else if(squint > 0.4 || blinkRateNow > 25) moodLabel = 'tired';
+    else moodLabel = 'neutral';
+
+    const phoneActive = performance.now() < phoneUntil;
+    if(phoneActive) currentState = 'phone';
+    else if(talking) currentState = 'talking';
+    else if(distracted) currentState = 'distracted';
+    else currentState = 'focused';
+  } else {
+    currentState = (now - lastFaceSeen > 4000) ? 'away' : lastState;
+  }
+
+  if(lastState !== currentState){
+    const dur = now - lastStateChangeAt;
+    stateTotals[lastState] = (stateTotals[lastState]||0)+dur;
+    windowTotals[lastState] = (windowTotals[lastState]||0)+dur;
+    if(currentState==='away'){ eventCounts.away++; windowEvents.away=(windowEvents.away||0)+1; }
+    if(currentState==='phone'){ eventCounts.phone++; windowEvents.phone=(windowEvents.phone||0)+1; }
+    if(currentState==='talking'){ eventCounts.talk++; windowEvents.talk=(windowEvents.talk||0)+1; }
+    lastState = currentState; lastStateChangeAt = now;
+    timelineSamples.push({state:currentState, t:now});
+    if(timelineSamples.length>400) timelineSamples.shift();
+    renderTimeline();
+  }
+  if(moodLabel){ moodCounts[moodLabel]=(moodCounts[moodLabel]||0)+1; windowMood[moodLabel]=(windowMood[moodLabel]||0)+1; }
+
+  updateUI(currentState);
+  rafId = requestAnimationFrame(loop);
+}
+
+function updateUI(currentState){
+  statusBadge.textContent = STATE_LABELS[currentState];
+  const totalTracked = Object.values(stateTotals).reduce((a,b)=>a+b,0) + (performance.now()-lastStateChangeAt);
+  const focusedMs = (stateTotals.focused||0) + (currentState==='focused' ? (performance.now()-lastStateChangeAt) : 0);
+  statFocus.textContent = totalTracked>1000 ? Math.round(focusedMs/totalTracked*100)+'%' : '—';
+  statBlink.textContent = blinkTimestamps.length;
+  statAway.textContent = eventCounts.away;
+  statPhone.textContent = eventCounts.phone;
+  statTalk.textContent = eventCounts.talk;
+  if(sessionStart) statTime.textContent = fmtClock(performance.now()-sessionStart);
+  const moodLabels = { positive:'Позитивное', neutral:'Нейтральное', strained:'Напряжённое', tired:'Признаки усталости' };
+  let dominant='neutral', best=-1;
+  for(const k in moodCounts){ if(moodCounts[k]>best){ best=moodCounts[k]; dominant=k; } }
+  moodPill.textContent = moodLabels[dominant] || '—';
+}
+
+function renderTimeline(){
+  timelineEl.innerHTML = '';
+  const recent = timelineSamples.slice(-60);
+  recent.forEach(s=>{
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.style.background = STATE_COLORS[s.state];
+    seg.style.width = (100/recent.length)+'%';
+    timelineEl.appendChild(seg);
+  });
+}
+
+function tick1s(){
+  if(!running || paused) return;
+  statTime.textContent = fmtClock(performance.now()-sessionStart);
+  const intervalMs = parseFloat(intervalSelect.value) * 60000;
+  if(performance.now() - windowStart >= intervalMs) generateReport();
+}
+
+function generateReport(){
+  const now = performance.now();
+  const ongoing = now - lastStateChangeAt;
+  const wt = {...windowTotals};
+  wt[lastState] = (wt[lastState]||0)+ongoing;
+  const totalMs = Object.values(wt).reduce((a,b)=>a+b,0) || 1;
+  const focusPct = Math.round(((wt.focused||0))/totalMs*100);
+
+  const parts = [];
+  if(focusPct>=75) parts.push(`Сотрудник был сосредоточен на экране большую часть периода (${focusPct}%).`);
+  else if(focusPct>=45) parts.push(`Вовлечённость умеренная — фокус на экране примерно ${focusPct}% времени.`);
+  else parts.push(`Вовлечённость низкая — фокус на экране лишь около ${focusPct}% времени.`);
+
+  const blinkRate = statBlink.textContent;
+  if(blinkRate !== '—') parts.push(`Частота морганий — около ${blinkRate}/мин.`);
+  if(windowEvents.away) parts.push(`Отходил(а) от рабочего места ${windowEvents.away} раз(а), суммарно ${fmtDurMin(wt.away||0)}.`);
+  if(windowEvents.phone) parts.push(`Телефон в кадре замечен ${windowEvents.phone} раз(а).`);
+  if(windowEvents.talk) parts.push(`Признаки разговора отмечены ${windowEvents.talk} раз(а).`);
+
+  const moodLabels = { positive:'позитивное', neutral:'нейтральное', strained:'напряжённое', tired:'признаки усталости' };
+  let dominant='neutral', best=-1;
+  for(const k in windowMood){ if(windowMood[k]>best){ best=windowMood[k]; dominant=k; } }
+  if(best>0) parts.push(`Преобладающее выражение лица за период — ${moodLabels[dominant]} (эвристическая оценка).`);
+
+  const text = parts.join(' ');
+  const to = Date.now();
+  const from = to - (now - windowStart);
+  reportLog.push({ from, to, fromClock: fmtTimeOfDay(from), toClock: fmtTimeOfDay(to), text });
+  reportLog = reportLog.slice(-30);
+  addLogRow(reportLog[reportLog.length-1]);
+
+  windowStart = now; windowTotals = {}; windowEvents = {}; windowMood = {};
+  syncToServer();
+}
+
+function addLogRow(item){
+  const row = document.createElement('div');
+  row.className = 'log-item';
+  row.innerHTML = `<div class="time">${item.fromClock} — ${item.toClock}</div><div class="text">${item.text}</div>`;
+  logEl.appendChild(row);
+}
+
+async function syncToServer(){
+  if(!empDocRef || !running) return;
+  try{
+    await updateDoc(empDocRef, {
+      online: true,
+      status: lastState,
+      lastSeen: serverTimestamp(),
+      stats: {
+        focusPct: statFocus.textContent,
+        blinkRate: statBlink.textContent,
+        awayCount: eventCounts.away,
+        phoneCount: eventCounts.phone,
+        talkCount: eventCounts.talk,
+        sessionTime: statTime.textContent,
+        mood: moodPill.textContent
+      },
+      reports: reportLog
+    });
+    syncBadge.textContent = 'Синхронизировано'; syncBadge.classList.add('ok');
+  }catch(e){
+    syncBadge.textContent = 'Ошибка синхронизации'; syncBadge.classList.remove('ok');
+  }
+}
+
+pauseBtn.addEventListener('click', ()=>{
+  paused = !paused;
+  pauseBtn.textContent = paused ? 'Продолжить' : 'Пауза';
+  recText.textContent = paused ? 'На паузе (по решению сотрудника)' : 'Идёт запись';
+  document.getElementById('recPill').style.opacity = paused ? '0.6' : '1';
+  if(empDocRef) updateDoc(empDocRef, { status: paused ? 'paused' : lastState, lastSeen: serverTimestamp() });
+});
+
+stopBtn.addEventListener('click', async ()=>{
+  if(windowTotals && Object.keys(windowTotals).length) generateReport();
+  running = false;
+  cancelAnimationFrame(rafId);
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  statusBadge.textContent = 'Остановлено';
+  if(empDocRef) await updateDoc(empDocRef, { online:false, status:'offline', lastSeen: serverTimestamp() });
+  downloadReport();
+});
+exportBtn.addEventListener('click', downloadReport);
+
+function downloadReport(){
+  const name = employeeNameInput.value.trim() || 'сотрудник';
+  let out = `Отчёт о вовлечённости — ${name}\nДата: ${new Date().toLocaleDateString('ru-RU')}\n`;
+  out += `Длительность сессии: ${statTime.textContent}\nИтоговая вовлечённость: ${statFocus.textContent}\n`;
+  out += `Морганий/мин: ${statBlink.textContent}\nОтходов: ${statAway.textContent}, Телефон: ${statPhone.textContent}, Разговор: ${statTalk.textContent}\n`;
+  out += `\n--- Периодические сводки ---\n`;
+  reportLog.forEach(item=>{ out += `\n[${item.fromClock} — ${item.toClock}] ${item.text}\n`; });
+  out += `\n(Оценки настроения и активности — эвристические, не диагностика.)\n`;
+  const blob = new Blob([out], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=`отчёт-${Date.now()}.txt`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+window.addEventListener('pagehide', ()=>{
+  if(empDocRef) updateDoc(empDocRef, { online:false, status:'offline' }).catch(()=>{});
+});
+
+// ---------------------------------------------------------------------------
+// WebRTC: отвечаем на запрос админа посмотреть камеру вживую
+// ---------------------------------------------------------------------------
+let pc = null;
+let activeCallId = null;
+const addedEmployeeCandidates = new Set();
+const addedAdminCandidates = new Set();
+
+function listenForCalls(){
+  const callsCol = collection(db, 'employees', uid, 'calls');
+  onSnapshot(callsCol, (snap)=>{
+    snap.docChanges().forEach(change=>{
+      const data = change.doc.data();
+      const callId = change.doc.id;
+      if(data.active && data.offer && callId !== activeCallId){
+        startResponder(change.doc.ref, data, callId);
+      } else if(!data.active && callId === activeCallId){
+        teardownCall();
+      } else if(data.active && callId === activeCallId){
+        (data.adminCandidates||[]).forEach(c=>{
+          if(!addedAdminCandidates.has(c)){
+            addedAdminCandidates.add(c);
+            pc && pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))).catch(()=>{});
+          }
+        });
+      }
+    });
+  });
+}
+
+async function startResponder(callRef, data, callId){
+  if(!stream){ return; } // камера ещё не запущена локально
+  activeCallId = callId;
+  addedAdminCandidates.clear();
+  addedEmployeeCandidates.clear();
+  pc = new RTCPeerConnection({ iceServers });
+  stream.getTracks().forEach(t=>pc.addTrack(t, stream));
+  pc.onicecandidate = (e)=>{
+    if(e.candidate){
+      const c = JSON.stringify(e.candidate);
+      if(!addedEmployeeCandidates.has(c)){
+        addedEmployeeCandidates.add(c);
+        updateDoc(callRef, { employeeCandidates: arrayUnion(c) }).catch(()=>{});
+      }
+    }
+  };
+  await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.offer)));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await updateDoc(callRef, { answer: JSON.stringify(answer) });
+  watchBanner.classList.add('active');
+}
+
+function teardownCall(){
+  if(pc){ pc.close(); pc = null; }
+  activeCallId = null;
+  watchBanner.classList.remove('active');
+}
+</script>
+</body>
+</html>
