@@ -183,6 +183,15 @@
   <footer>Обработка видео — локально в браузере. Статистика синхронизируется с админ-панелью компании через Firebase.</footer>
 </div>
 
+<script>
+  window.addEventListener('error', (e)=>{
+    alert('Ошибка на странице: ' + (e.message || e.error) + '\n' + (e.filename||''));
+  });
+  window.addEventListener('unhandledrejection', (e)=>{
+    const msg = (e.reason && e.reason.message) ? e.reason.message : e.reason;
+    alert('Ошибка (promise): ' + msg);
+  });
+</script>
 <script type="module">
 import { FaceLandmarker, ObjectDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -257,14 +266,22 @@ function fmtTimeOfDay(ts){ return new Date(ts).toLocaleTimeString('ru-RU',{hour:
 function fmtDurMin(ms){ const t=Math.round(ms/1000),m=Math.floor(t/60),s=t%60; return m<=0?`${s} с`:`${m} мин ${s} с`; }
 
 agreeBtn.addEventListener('click', async ()=>{
+  agreeBtn.disabled = true;
+  agreeBtn.textContent = 'Запуск...';
   const name = employeeNameInput.value.trim() || 'Без имени';
-  whoLabel.textContent = name + ' · монитор вовлечённости';
-  consentGate.style.display = 'none';
-  mainWrap.classList.add('visible');
-  if(empDocRef){
-    await setDoc(empDocRef, { name, online:true, status:'starting', lastSeen: serverTimestamp(), stats:{}, reports:[] }, { merge:true });
+  try{
+    if(empDocRef){
+      await setDoc(empDocRef, { name, online:true, status:'starting', lastSeen: serverTimestamp(), stats:{}, reports:[] }, { merge:true });
+    }
+    whoLabel.textContent = name + ' · монитор вовлечённости';
+    consentGate.style.display = 'none';
+    mainWrap.classList.add('visible');
+    await startAll();
+  }catch(err){
+    alert('Не удалось запустить: ' + err.message);
+    agreeBtn.disabled = false;
+    agreeBtn.textContent = 'Я уведомлён(а) и согласен(на) — начать';
   }
-  await startAll();
 });
 
 async function initModels(){
