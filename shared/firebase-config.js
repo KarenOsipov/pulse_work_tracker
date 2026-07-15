@@ -3,9 +3,6 @@
 // Это НЕ секретный ключ в привычном смысле — он предназначен для использования в браузере,
 // реальная защита данных обеспечивается правилами доступа Firestore (см. README.md).
 
-import { initializeApp } from "firebase/app";
-import { getAnalytics, isSupported } from "firebase/analytics";
-
 export const firebaseConfig = {
   apiKey: "AIzaSyBpz0thdMXImaEJCnt6yoPwR7H2PCbFE0k",
   authDomain: "pulsewt.firebaseapp.com",
@@ -22,15 +19,3 @@ export const firebaseConfig = {
 export const iceServers = [
   { urls: "stun:stun.l.google.com:19302" }
 ];
-
-// Инициализация Firebase
-export const app = initializeApp(firebaseConfig);
-
-// Analytics работает только в браузере и только если поддерживается —
-// поэтому включаем через isSupported(), чтобы не падало в SSR/Node
-export let analytics = null;
-isSupported().then((supported) => {
-  if (supported) {
-    analytics = getAnalytics(app);
-  }
-});
