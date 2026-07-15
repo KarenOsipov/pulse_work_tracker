@@ -533,6 +533,7 @@ async function syncToServer(){
     syncBadge.textContent = 'Синхронизировано'; syncBadge.classList.add('ok');
   }catch(e){
     syncBadge.textContent = 'Ошибка синхронизации'; syncBadge.classList.remove('ok');
+    console.error('syncToServer error:', e.code || e.message, e);
   }
 }
 
@@ -610,6 +611,7 @@ async function startResponder(callRef, data, callId){
   addedEmployeeCandidates.clear();
   pc = new RTCPeerConnection({ iceServers });
   stream.getTracks().forEach(t=>pc.addTrack(t, stream));
+  pc.oniceconnectionstatechange = ()=> console.log('ICE state (employee):', pc.iceConnectionState);
   pc.onicecandidate = (e)=>{
     if(e.candidate){
       const c = JSON.stringify(e.candidate);
