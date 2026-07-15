@@ -1,15 +1,14 @@
-// Вставь сюда конфиг своего проекта Firebase.
-// Взять его можно в консоли Firebase: Project settings -> General -> "Your apps" -> Web app -> SDK setup and configuration.
+// Конфиг проекта Firebase "pulsewt".
 // Это НЕ секретный ключ в привычном смысле — он предназначен для использования в браузере,
 // реальная защита данных обеспечивается правилами доступа Firestore (см. README.md).
 
 export const firebaseConfig = {
-  apiKey: "ВСТАВЬ_СЮДА",
-  authDomain: "ВСТАВЬ_СЮДА.firebaseapp.com",
-  projectId: "ВСТАВЬ_СЮДА",
-  storageBucket: "ВСТАВЬ_СЮДА.appspot.com",
-  messagingSenderId: "ВСТАВЬ_СЮДА",
-  appId: "ВСТАВЬ_СЮДА"
+  apiKey: "AIzaSyBpz0thdMXImaEJCnt6yoPwR7H2PCbFE0k",
+  authDomain: "pulsewt.firebaseapp.com",
+  projectId: "pulsewt",
+  storageBucket: "pulsewt.firebasestorage.app",
+  messagingSenderId: "748924811708",
+  appId: "1:748924811708:web:29a65238e70704be1793b9"
 };
 
 // Публичные STUN-сервера для WebRTC (обычно достаточно для сети офиса/дома).
