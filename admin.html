@@ -205,6 +205,9 @@ function subscribeEmployees(){
     snap.forEach(d=> employeesData[d.id] = d.data());
     renderEmployeeList();
     if(selectedEmpId && employeesData[selectedEmpId]) renderDetail(selectedEmpId, employeesData[selectedEmpId]);
+  }, (err)=>{
+    console.error('subscribeEmployees error:', err.code, err);
+    empList.innerHTML = `<div class="empty-hint">Ошибка доступа к базе: ${err.code}.<br>Проверь Firestore Rules (см. README, шаг 3).</div>`;
   });
 }
 
@@ -212,6 +215,12 @@ function isOnline(data){
   if(!data.online) return false;
   if(!data.lastSeen || !data.lastSeen.toMillis) return true; // только что записано, ещё нет серверного времени
   return (Date.now() - data.lastSeen.toMillis()) < 20000;
+}
+
+function esc(s){
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
 }
 
 function renderEmployeeList(){
@@ -225,8 +234,8 @@ function renderEmployeeList(){
     const row = document.createElement('div');
     row.className = 'emp-row' + (id===selectedEmpId ? ' selected' : '');
     row.innerHTML = `<span class="dot ${online?'online':'offline'}"></span>
-      <span class="name">${data.name || 'Без имени'}</span>
-      <span class="mini">${data.stats?.focusPct || '—'}</span>`;
+      <span class="name">${esc(data.name || 'Без имени')}</span>
+      <span class="mini">${esc(data.stats?.focusPct || '—')}</span>`;
     row.addEventListener('click', ()=> selectEmployee(id));
     empList.appendChild(row);
   });
@@ -255,7 +264,7 @@ function renderDetail(id, data){
   (data.reports || []).forEach(r=>{
     const row = document.createElement('div');
     row.className = 'log-item';
-    row.innerHTML = `<div class="time">${r.fromClock} — ${r.toClock}</div><div class="text">${r.text}</div>`;
+    row.innerHTML = `<div class="time">${esc(r.fromClock)} — ${esc(r.toClock)}</div><div class="text">${esc(r.text)}</div>`;
     detailLog.appendChild(row);
   });
 }
@@ -276,53 +285,59 @@ watchBtn.addEventListener('click', ()=>{
 async function startWatching(){
   if(!selectedEmpId) return;
   watchBtn.textContent = 'Подключение...';
-  pc = new RTCPeerConnection({ iceServers });
-  pc.addTransceiver('video', { direction: 'recvonly' });
-  pc.ontrack = (e)=>{
-    remoteVideo.srcObject = e.streams[0];
-    videoPlaceholder.style.display = 'none';
-  };
-  pc.oniceconnectionstatechange = ()=>{
-    console.log('ICE state (admin):', pc.iceConnectionState);
-    if(pc.iceConnectionState === 'failed'){
-      videoPlaceholder.textContent = 'Не удалось установить соединение (вероятно, нужен TURN-сервер — см. README).';
-      videoPlaceholder.style.display = 'flex';
-    }
-  };
-  addedEmpCandidates.clear();
-
-  const callsCol = collection(db, 'employees', selectedEmpId, 'calls');
-  callDocRef = doc(callsCol);
-
-  pc.onicecandidate = (e)=>{
-    if(e.candidate && callDocRef){
-      updateDoc(callDocRef, { adminCandidates: arrayUnion(JSON.stringify(e.candidate)) }).catch(()=>{});
-    }
-  };
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  await setDoc(callDocRef, {
-    active: true, offer: JSON.stringify(offer),
-    adminCandidates: [], employeeCandidates: [], createdAt: serverTimestamp()
-  });
-
-  callUnsub = onSnapshot(callDocRef, async (snap)=>{
-    const data = snap.data();
-    if(!data) return;
-    if(data.answer && pc.signalingState === 'have-local-offer'){
-      await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.answer)));
-    }
-    (data.employeeCandidates||[]).forEach(c=>{
-      if(!addedEmpCandidates.has(c)){
-        addedEmpCandidates.add(c);
-        pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))).catch(()=>{});
+  try{
+    pc = new RTCPeerConnection({ iceServers });
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.ontrack = (e)=>{
+      remoteVideo.srcObject = e.streams[0];
+      videoPlaceholder.style.display = 'none';
+    };
+    pc.oniceconnectionstatechange = ()=>{
+      console.log('ICE state (admin):', pc.iceConnectionState);
+      if(pc.iceConnectionState === 'failed'){
+        videoPlaceholder.textContent = 'Не удалось установить соединение (вероятно, нужен TURN-сервер — см. README).';
+        videoPlaceholder.style.display = 'flex';
       }
-    });
-  });
+    };
+    addedEmpCandidates.clear();
 
-  watching = true;
-  watchBtn.textContent = 'Остановить просмотр';
+    const callsCol = collection(db, 'employees', selectedEmpId, 'calls');
+    callDocRef = doc(callsCol);
+
+    pc.onicecandidate = (e)=>{
+      if(e.candidate && callDocRef){
+        updateDoc(callDocRef, { adminCandidates: arrayUnion(JSON.stringify(e.candidate)) }).catch(()=>{});
+      }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await setDoc(callDocRef, {
+      active: true, offer: JSON.stringify(offer),
+      adminCandidates: [], employeeCandidates: [], createdAt: serverTimestamp()
+    });
+
+    callUnsub = onSnapshot(callDocRef, async (snap)=>{
+      const data = snap.data();
+      if(!data) return;
+      if(data.answer && pc.signalingState === 'have-local-offer'){
+        await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.answer)));
+      }
+      (data.employeeCandidates||[]).forEach(c=>{
+        if(!addedEmpCandidates.has(c)){
+          addedEmpCandidates.add(c);
+          pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))).catch(()=>{});
+        }
+      });
+    });
+
+    watching = true;
+    watchBtn.textContent = 'Остановить просмотр';
+  }catch(err){
+    console.error('startWatching error:', err);
+    alert('Не удалось запросить видео: ' + err.message + '\n(проверь правила Firestore для подколлекции calls)');
+    stopWatching();
+  }
 }
 
 function stopWatching(){
